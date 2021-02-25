@@ -1,0 +1,22 @@
+{
+  "name": "localpack",
+  "version": "1.0.0",
+  "description": "Utility for packing all local dependencies into the main project directory",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kenkawakenkenke/localpack.git"
+  },
+  "author": "Ken Kawamoto <ken@kawamoto.co.uk> (http://kawamoto.co.uk/)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kenkawakenkenke/localpack/issues"
+  },
+  "homepage": "https://github.com/kenkawakenkenke/localpack#readme",
+  "bin": {
+    "localpack": "src/index.js"
+  }
+}
