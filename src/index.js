@@ -3,6 +3,8 @@ import fs from "fs";
 import path from "path";
 import { exec } from "child_process";
 import util from "util";
+import { promptYesNo } from "./utils/prompt.js";
+import * as color from "./utils/color.js";
 
 import serialMap from "./utils/serial_map.js";
 
@@ -11,6 +13,15 @@ const asyncexec = util.promisify(exec);
 function parseDependencies(dependencies = []) {
     return Object.entries(dependencies)
         .map(([moduleName, modulePath]) => ({ moduleName, modulePath }));
+}
+
+function getLocalDependencies(dependencies) {
+    return dependencies.filter(({ modulePath }) => modulePath.match("file:"))
+        .filter(({ modulePath }) => !modulePath.match("tgz"))
+        .map(({ moduleName, modulePath }) => {
+            const parsedPath = modulePath.match("file:(.*)")[1];
+            return { moduleName, modulePath: parsedPath };
+        });
 }
 
 function createModuleInfo(moduleName, modulePath, localDependencies) {
@@ -37,19 +48,7 @@ function getLocalDepedencyGraph(localPackConfig) {
         }
         const packageFile = JSON.parse(fs.readFileSync(path.join(modulePath, "package.json")));
         const localDependencies =
-            parseDependencies(packageFile.dependencies)
-                // Any local dependencies
-                .filter(({ modulePath }) => modulePath.match("file:"))
-                .map(({ moduleName, modulePath }) => {
-                    const parsedPath = modulePath.match("file:(.*)")[1]
-                    return {
-                        moduleName,
-                        modulePath: parsedPath,
-                    };
-                })
-                // That don't use tgz packs. (We assume here that the tgz file is contained within the module directory.
-                // If there are submodules that have tgz files outside, then this will break.)
-                .filter(({ modulePath }) => !modulePath.match("tgz$"));
+            getLocalDependencies(parseDependencies(packageFile.dependencies));
         localDependencies.forEach(({ moduleName, modulePath }) => {
             modulesNeedingProcessing.push({ moduleName, modulePath });
         });
@@ -178,18 +177,39 @@ async function redirectSubmoduleArchives(submoduleArchiveDir, sortedSubmodules, 
 }
 
 (async () => {
-    const submoduleArchiveDir = "sub_modules";
-    fs.rmdirSync(submoduleArchiveDir, { recursive: true });
-    fs.mkdirSync(submoduleArchiveDir, { recursive: true });
+    const rootPackageConfig = JSON.parse(fs.readFileSync("package.json"));
 
-    const localPackConfig = JSON.parse(fs.readFileSync("localpack.json"));
+    const localPackConfigFile = "localpack.json";
+    if (!fs.existsSync(localPackConfigFile)) {
+        console.error(
+            color.redBackground(`${localPackConfigFile} is missing!`));
+        const answer = await promptYesNo("Do you want to build one from package.json?");
+        if (!answer) {
+            console.log("Aborting!");
+            return;
+        }
+
+        const localPackConfig = {
+            localDependencies:
+                Object.fromEntries(
+                    getLocalDependencies(
+                        parseDependencies(rootPackageConfig.dependencies))
+                        .map(({ moduleName, modulePath }) => [moduleName, modulePath]))
+        };
+        fs.writeFileSync(localPackConfigFile, JSON.stringify(localPackConfig, null, 2));
+        console.log(`Created ${localPackConfigFile}. You should check-in this file.`);
+    }
+    const localPackConfig = JSON.parse(fs.readFileSync(localPackConfigFile));
+
+    const submoduleArchiveDir = "sub_modules";
+    fs.rmSync(submoduleArchiveDir, { recursive: true, force: true });
+    fs.mkdirSync(submoduleArchiveDir, { recursive: true });
 
     const moduleSpecsForName = getLocalDepedencyGraph(localPackConfig);
 
     const submodules = Object.values(moduleSpecsForName)
         .filter(module => module.moduleName !== "ROOT");
 
-    const sortedModules = flattenDependencies(Object.values(moduleSpecsForName));
     const sortedSubmodules = flattenDependencies(submodules);
 
     await packModules(submoduleArchiveDir, submodules);
@@ -197,15 +217,17 @@ async function redirectSubmoduleArchives(submoduleArchiveDir, sortedSubmodules, 
     await redirectSubmoduleArchives(submoduleArchiveDir, sortedSubmodules, moduleSpecsForName);
 
     // Now update our own package.json
-    const rootPackageConfig = JSON.parse(fs.readFileSync("package.json"));
     moduleSpecsForName["ROOT"].localDependencies.forEach(dependency => {
         const module = moduleSpecsForName[dependency];
         const archivePath = path.join(submoduleArchiveDir, module.archiveName);
+        if (!rootPackageConfig.dependencies) {
+            rootPackageConfig.dependencies = {};
+        }
         rootPackageConfig.dependencies[module.moduleName] = `file:./${archivePath}`;
     });
     fs.writeFileSync("package.json", JSON.stringify(rootPackageConfig, null, 2));
     fs.rmSync("package-lock.json", { force: true });
-    fs.rmdirSync("node_modules", { recursive: true });
+    fs.rmSync("node_modules", { recursive: true, force: true });
 
     // const res = await asyncexec(`npm install --cache ./new_cache`);
     const res = await asyncexec(`npm install`);
