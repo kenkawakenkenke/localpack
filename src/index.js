@@ -1,21 +1,12 @@
 #!/usr/bin/env node
+import fs from "fs";
+import path from "path";
+import { exec } from "child_process";
+import util from "util";
 
-const fs = require("fs");
-const path = require("path");
-const { exec } = require("child_process");
-const util = require("util");
+import serialMap from "./utils/serial_map.js";
 
 const asyncexec = util.promisify(exec);
-
-function serialMap(elements, elementToPromiseFactory) {
-    let chain = Promise.resolve([]);
-    elements.forEach(element => {
-        chain = chain
-            .then(chainedRes =>
-                elementToPromiseFactory(element).then(res => [...chainedRes, res]));
-    });
-    return chain;
-};
 
 function parseDependencies(dependencies = []) {
     return Object.entries(dependencies)

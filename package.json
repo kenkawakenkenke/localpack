@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Utility for packing all local dependencies into the main project directory",
   "main": "src/index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
