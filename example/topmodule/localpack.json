@@ -1,0 +1,6 @@
+{
+    "localDependencies": {
+        "submodule_b": "../submodule_b",
+        "submodule_c": "../submodule_c"
+    }
+}

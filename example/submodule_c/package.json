@@ -1,0 +1,17 @@
+{
+  "name": "submodule_c",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "submodule_a": "file:../submodule_a",
+    "submodule_b": "file:../submodule_b",
+    "twitter": "^1.7.1"
+  }
+}
