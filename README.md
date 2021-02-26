@@ -19,14 +19,14 @@ Then create `localpack.json` describing all your local dependencies:
 }
 ```
 Finally run `npx localpack`.
-All your local dependencies (including indirect ones) should be packaged into a new sub_modules folder:
+All your local dependencies (including indirect ones) will now be packaged into a new sub_modules folder:
 ```
 sub_modules
  |_ submodule_a-1.0.2.tgz
  |_ submodule_b-1.0.1.tgz
  |_ submodule_c-1.0.3.tgz
  ```
- and your package.json should be updated to point to the archive files:
+ and your package.json will have been updated to point to the archive files:
  ```
  .
  .
