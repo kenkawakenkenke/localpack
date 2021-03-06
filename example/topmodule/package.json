@@ -10,8 +10,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "submodule_b": "file:../submodule_b",
-    "submodule_c": "file:../submodule_c"
+    "submodule_b": "file:./sub_modules/submodule_b",
+    "submodule_c": "file:./sub_modules/submodule_c"
   },
   "devDependencies": {
     "@babel/core": "^7.13.1",

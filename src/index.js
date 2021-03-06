@@ -135,21 +135,17 @@ async function redirectSubmoduleArchives(submoduleArchiveDir, sortedSubmodules, 
             const module = moduleSpecsForName[moduleName];
             const archivePath = module.archiveName;
 
-            // console.log(module);
-
-            if (module.localDependencies.length === 0) {
-                // console.log("no dependencies, nothing to do.");
-                return 0;
-            }
-
             // Unarchive *.tgz -> package
             await asyncexec(`tar -xf ${archivePath}`, { cwd: submoduleArchiveDir });
 
-            const packageDirPath = "package";
+            const packageDirPath = moduleName;
+
+            fs.renameSync(path.join(submoduleArchiveDir, "package"),
+                path.join(submoduleArchiveDir, packageDirPath));
 
             let editedDependencies = { ...module.packageConfig.dependencies };
             module.localDependencies.forEach(dependency => {
-                editedDependencies[dependency] = `file:./${moduleSpecsForName[dependency].archiveName}`;
+                editedDependencies[dependency] = `file:../${dependency}`;
             });
             let editedPackage = {
                 ...module.packageConfig,
@@ -158,19 +154,11 @@ async function redirectSubmoduleArchives(submoduleArchiveDir, sortedSubmodules, 
             fs.writeFileSync(path.join(submoduleArchiveDir, packageDirPath, "package.json"),
                 JSON.stringify(editedPackage, null, 2));
 
-            // Copy tgz files for dependencies.
-            module.transitiveClosure.forEach(dependency => {
-                const subModule = moduleSpecsForName[dependency];
-                const fromPath = path.join(submoduleArchiveDir, subModule.archiveName);
-                const toPath = path.join(submoduleArchiveDir, packageDirPath, subModule.archiveName);
-                fs.copyFileSync(fromPath, toPath);
-            });
+            const res = await asyncexec(`npm install`, { cwd: path.join(submoduleArchiveDir, packageDirPath) });
+            console.log(res.stdout);
 
-            // Archive back: package -> *.tgz
-            await asyncexec(`tar -cf ${archivePath} ${packageDirPath}`, { cwd: submoduleArchiveDir });
-
-            // Delete package folder
-            fs.rmdirSync(path.join(submoduleArchiveDir, packageDirPath), { recursive: true });
+            // Delete packed archive
+            fs.rmSync(path.join(submoduleArchiveDir, archivePath));
 
             return 0;
         });
@@ -219,11 +207,11 @@ async function redirectSubmoduleArchives(submoduleArchiveDir, sortedSubmodules, 
     // Now update our own package.json
     moduleSpecsForName["ROOT"].localDependencies.forEach(dependency => {
         const module = moduleSpecsForName[dependency];
-        const archivePath = path.join(submoduleArchiveDir, module.archiveName);
+        const submodulePath = path.join(submoduleArchiveDir, dependency);
         if (!rootPackageConfig.dependencies) {
             rootPackageConfig.dependencies = {};
         }
-        rootPackageConfig.dependencies[module.moduleName] = `file:./${archivePath}`;
+        rootPackageConfig.dependencies[module.moduleName] = `file:./${submodulePath}`;
     });
     fs.writeFileSync("package.json", JSON.stringify(rootPackageConfig, null, 2));
     fs.rmSync("package-lock.json", { force: true });
