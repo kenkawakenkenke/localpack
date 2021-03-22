@@ -154,7 +154,7 @@ async function redirectSubmoduleArchives(submoduleArchiveDir, sortedSubmodules, 
             fs.writeFileSync(path.join(submoduleArchiveDir, packageDirPath, "package.json"),
                 JSON.stringify(editedPackage, null, 2));
 
-            const res = await asyncexec(`npm install`, { cwd: path.join(submoduleArchiveDir, packageDirPath) });
+            const res = await asyncexec(`npm install --force`, { cwd: path.join(submoduleArchiveDir, packageDirPath) });
             console.log(res.stdout);
 
             // Delete packed archive
@@ -218,6 +218,6 @@ async function redirectSubmoduleArchives(submoduleArchiveDir, sortedSubmodules, 
     fs.rmSync("node_modules", { recursive: true, force: true });
 
     // const res = await asyncexec(`npm install --cache ./new_cache`);
-    const res = await asyncexec(`npm install`);
+    const res = await asyncexec(`npm install --force`);
     console.log(res.stdout);
 })();

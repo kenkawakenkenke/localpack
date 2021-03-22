@@ -1,6 +1,6 @@
 {
   "name": "localpack",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Utility for packing all local dependencies into the main project directory",
   "main": "src/index.js",
   "type": "module",
